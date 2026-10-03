@@ -27,6 +27,7 @@
 /* USER CODE BEGIN Includes */
 
 #include "buzzer.h"
+#include "led.h"
 
 /* USER CODE END Includes */
 
@@ -210,10 +211,12 @@ void StartTask02(void *argument)
 void StartTask03(void *argument)
 {
   /* USER CODE BEGIN StartTask03 */
+
   /* Infinite loop */
   for(;;)
   {
-    osDelay(1);
+    led_show_chase_step();
+    osDelay(250);
   }
   /* USER CODE END StartTask03 */
 }
