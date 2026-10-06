@@ -78,12 +78,12 @@ const osThreadAttr_t imu_task_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityAboveNormal,
 };
-/* Definitions for telemetry_task */
-osThreadId_t telemetry_taskHandle;
-const osThreadAttr_t telemetry_task_attributes = {
-  .name = "telemetry_task",
-  .stack_size = 512 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+/* Definitions for plotter_task */
+osThreadId_t plotter_taskHandle;
+const osThreadAttr_t plotter_task_attributes = {
+  .name = "plotter_task",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for dt7_task */
 osThreadId_t dt7_taskHandle;
@@ -101,9 +101,9 @@ const osThreadAttr_t dt7_task_attributes = {
 void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
 void StartTask03(void *argument);
-void StartTask04(void *argument);
-void StartTask05(void *argument);
 void StartTask06(void *argument);
+extern void imu_task_entry(void *argument);
+extern void plotter_task(void *argument);
 
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
@@ -144,10 +144,10 @@ void MX_FREERTOS_Init(void) {
   led_taskHandle = osThreadNew(StartTask03, NULL, &led_task_attributes);
 
   /* creation of imu_task */
-  imu_taskHandle = osThreadNew(StartTask04, NULL, &imu_task_attributes);
+  imu_taskHandle = osThreadNew(imu_task_entry, NULL, &imu_task_attributes);
 
-  /* creation of telemetry_task */
-  telemetry_taskHandle = osThreadNew(StartTask05, NULL, &telemetry_task_attributes);
+  /* creation of plotter_task */
+  plotter_taskHandle = osThreadNew(plotter_task, NULL, &plotter_task_attributes);
 
   /* creation of dt7_task */
   dt7_taskHandle = osThreadNew(StartTask06, NULL, &dt7_task_attributes);
@@ -219,42 +219,6 @@ void StartTask03(void *argument)
     osDelay(250);
   }
   /* USER CODE END StartTask03 */
-}
-
-/* USER CODE BEGIN Header_StartTask04 */
-/**
-* @brief Function implementing the imu_task thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask04 */
-void StartTask04(void *argument)
-{
-  /* USER CODE BEGIN StartTask04 */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END StartTask04 */
-}
-
-/* USER CODE BEGIN Header_StartTask05 */
-/**
-* @brief Function implementing the telemetry_task thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask05 */
-void StartTask05(void *argument)
-{
-  /* USER CODE BEGIN StartTask05 */
-  /* Infinite loop */
-  for(;;)
-  {
-    osDelay(1);
-  }
-  /* USER CODE END StartTask05 */
 }
 
 /* USER CODE BEGIN Header_StartTask06 */
