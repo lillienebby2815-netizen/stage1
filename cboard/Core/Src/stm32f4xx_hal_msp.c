@@ -78,6 +78,44 @@ void HAL_MspInit(void)
   /* USER CODE END MspInit 1 */
 }
 
+static uint32_t HAL_RCC_CAN1_CLK_ENABLED = 0U;
+
+void HAL_CAN_MspInit(CAN_HandleTypeDef * canHandle)
+{
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  if (canHandle->Instance == CAN1) {
+    HAL_RCC_CAN1_CLK_ENABLED++;
+    if (HAL_RCC_CAN1_CLK_ENABLED == 1U) {
+      __HAL_RCC_CAN1_CLK_ENABLE();
+    }
+
+    __HAL_RCC_GPIOD_CLK_ENABLE();
+    /* CAN1 is routed through PD0/PD1 on the C-board transceiver. */
+    GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF9_CAN1;
+    HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
+
+    HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 5, 0);
+    HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
+  }
+}
+
+void HAL_CAN_MspDeInit(CAN_HandleTypeDef * canHandle)
+{
+  if (canHandle->Instance == CAN1) {
+    HAL_RCC_CAN1_CLK_ENABLED--;
+    if (HAL_RCC_CAN1_CLK_ENABLED == 0U) {
+      __HAL_RCC_CAN1_CLK_DISABLE();
+    }
+    HAL_GPIO_DeInit(GPIOD, GPIO_PIN_0 | GPIO_PIN_1);
+    HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
+  }
+}
+
 /* USER CODE BEGIN 1 */
 
 /* USER CODE END 1 */

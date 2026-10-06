@@ -29,6 +29,10 @@
 #include "buzzer.h"
 #include "led.h"
 
+/* The DT7 receiver is started once the RTOS scheduler is running. */
+extern void cboard_dt7_start_receive(void);
+extern void linkage_task(void *argument);
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -92,6 +96,13 @@ const osThreadAttr_t dt7_task_attributes = {
   .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
+/* Definitions for linkage_task */
+osThreadId_t linkage_taskHandle;
+const osThreadAttr_t linkage_task_attributes = {
+  .name = "linkage_task",
+  .stack_size = 512 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal,
+};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -151,6 +162,9 @@ void MX_FREERTOS_Init(void) {
 
   /* creation of dt7_task */
   dt7_taskHandle = osThreadNew(StartTask06, NULL, &dt7_task_attributes);
+
+  /* creation of linkage_task */
+  linkage_taskHandle = osThreadNew(linkage_task, NULL, &linkage_task_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -231,9 +245,13 @@ void StartTask03(void *argument)
 void StartTask06(void *argument)
 {
   /* USER CODE BEGIN StartTask06 */
+  cboard_dt7_start_receive();
+
   /* Infinite loop */
   for(;;)
   {
+    /* Restart reception after a blocking UART error has been recovered. */
+    cboard_dt7_start_receive();
     osDelay(1);
   }
   /* USER CODE END StartTask06 */

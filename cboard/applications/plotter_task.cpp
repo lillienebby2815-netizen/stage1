@@ -3,15 +3,20 @@
 #include "cmsis_os.h"
 
 #include "imu/bmi088.hpp"
+#include "remote/dbus.hpp"
 #include "usart.h"
 
 namespace
 {
 constexpr std::uint32_t kPeriodMs = 10U;  // 100 Hz
 constexpr std::uint32_t kStatusEveryCycles = 100U;  // 1 s while the IMU is not ready
+constexpr std::uint32_t kDt7EveryCycles = 10U;  // 10 Hz DT7 debug line
 
-// Worst case: 6 values * 15 chars + 5 commas + newline = 96 bytes.
-std::uint8_t tx_buffer[112];
+// IMU line: worst case 6 values * 15 chars + 5 commas + CRLF = 97 bytes.
+// DT7 line: "DT7," + 7 small ints + 3 counters + commas + CRLF < 100 bytes.
+// RAW line: "RAW," + 64 hex chars + CRLF = 70 bytes.
+// CHG line: "CHG," + 50 hex chars + CRLF = 56 bytes.
+std::uint8_t tx_buffer[384];
 
 char * append_uint(char * out, std::uint32_t value)
 {
@@ -25,6 +30,15 @@ char * append_uint(char * out, std::uint32_t value)
     *out++ = digits[--count];
   }
   return out;
+}
+
+char * append_int(char * out, std::int32_t value)
+{
+  if (value < 0) {
+    *out++ = '-';
+    return append_uint(out, static_cast<std::uint32_t>(-(value + 1)) + 1U);
+  }
+  return append_uint(out, static_cast<std::uint32_t>(value));
 }
 
 // Fixed point with three decimals. newlib-nano printf has no float support,
@@ -56,6 +70,13 @@ char * append_text(char * out, const char * text)
   while (*text != '\0') {
     *out++ = *text++;
   }
+  return out;
+}
+
+char * append_crlf(char * out)
+{
+  *out++ = '\r';
+  *out++ = '\n';
   return out;
 }
 }  // namespace
@@ -91,16 +112,50 @@ extern "C" void plotter_task(void * argument)
       out = append_fixed3(out, cboard::bmi088.gyro[1]);
       *out++ = ',';
       out = append_fixed3(out, cboard::bmi088.gyro[2]);
-      *out++ = '\r';
-      *out++ = '\n';
+      out = append_crlf(out);
     }
     else if (cycle % kStatusEveryCycles == 0U) {
       out = append_text(out, "IMU_WAIT,err=");
       out = append_uint(out, cboard::bmi088.last_error);
-      *out++ = '\r';
-      *out++ = '\n';
+      out = append_crlf(out);
     }
-    else {
+
+    if (cycle % kDt7EveryCycles == 0U) {
+      // DT7,ch0,ch1,ch2,ch3,left,right,valid,rx_bytes,frames,tail_byte
+      // Channels are -660..660 around centre; switches are -1 down, 0 mid, 1 up, 2 unknown.
+      const cboard::Dt7Snapshot remote = cboard::dt7_receiver.snapshot(HAL_GetTick());
+      out = append_text(out, "DT7");
+      for (const std::int16_t channel : remote.channel) {
+        *out++ = ',';
+        out = append_int(out, channel);
+      }
+      *out++ = ',';
+      out = append_int(out, static_cast<std::int32_t>(remote.left_switch));
+      *out++ = ',';
+      out = append_int(out, static_cast<std::int32_t>(remote.right_switch));
+      *out++ = ',';
+      out = append_uint(out, remote.valid ? 1U : 0U);
+      *out++ = ',';
+      out = append_uint(out, cboard::dt7_receiver.event_count());
+      *out++ = ',';
+      out = append_uint(out, cboard::dt7_receiver.frame_count());
+      *out++ = ',';
+      out = append_uint(out, cboard::dt7_receiver.last_event_size());
+      out = append_crlf(out);
+
+      // RAW,<last accepted 18-byte frame in hex>
+      std::uint8_t frame[cboard::Dt7Receiver::kFrameLength];
+      cboard::dt7_receiver.copy_last_frame(frame);
+      out = append_text(out, "RAW,");
+      for (const std::uint8_t value : frame) {
+        constexpr char kHex[] = "0123456789ABCDEF";
+        *out++ = kHex[value >> 4U];
+        *out++ = kHex[value & 0x0FU];
+      }
+      out = append_crlf(out);
+    }
+
+    if (out == begin) {
       continue;
     }
 
