@@ -3,6 +3,7 @@
 #include "cmsis_os.h"
 
 #include "imu/bmi088.hpp"
+#include "linkage/linkage_task.hpp"
 #include "remote/dbus.hpp"
 #include "usart.h"
 
@@ -16,7 +17,7 @@ constexpr std::uint32_t kDt7EveryCycles = 10U;  // 10 Hz DT7 debug line
 // DT7 line: "DT7," + 7 small ints + 3 counters + commas + CRLF < 100 bytes.
 // RAW line: "RAW," + 64 hex chars + CRLF = 70 bytes.
 // CHG line: "CHG," + 50 hex chars + CRLF = 56 bytes.
-std::uint8_t tx_buffer[384];
+std::uint8_t tx_buffer[512];
 
 char * append_uint(char * out, std::uint32_t value)
 {
@@ -119,6 +120,27 @@ extern "C" void plotter_task(void * argument)
       out = append_uint(out, cboard::bmi088.last_error);
       out = append_crlf(out);
     }
+
+    // LNK,ratio,yaw,a_target,a_angle,b_target,b_angle,a_current,b_current
+    // Angles in rad, currents in raw GM6020 units. Compare b_target with
+    // b_angle to see tracking error and whether current stays small/saturated.
+    out = append_text(out, "LNK,");
+    out = append_fixed3(out, cboard::linkage_output.motor_b_ratio);
+    *out++ = ',';
+    out = append_fixed3(out, cboard::linkage_yaw_angle_rad);
+    *out++ = ',';
+    out = append_fixed3(out, cboard::linkage_output.motor_a_target_angle_rad);
+    *out++ = ',';
+    out = append_fixed3(out, cboard::linkage_motor_a_angle_rad);
+    *out++ = ',';
+    out = append_fixed3(out, cboard::linkage_output.motor_b_target_angle_rad);
+    *out++ = ',';
+    out = append_fixed3(out, cboard::linkage_motor_b_angle_rad);
+    *out++ = ',';
+    out = append_int(out, cboard::linkage_current_a_raw);
+    *out++ = ',';
+    out = append_int(out, cboard::linkage_current_b_raw);
+    out = append_crlf(out);
 
     if (cycle % kDt7EveryCycles == 0U) {
       // DT7,ch0,ch1,ch2,ch3,left,right,valid,rx_bytes,frames,tail_byte

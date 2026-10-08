@@ -6,8 +6,10 @@ namespace
 {
 constexpr std::uint16_t kFeedbackIdFirst = 0x205U;
 constexpr std::uint16_t kFeedbackIdLast = 0x208U;
-constexpr std::uint16_t kCommandIdFirstGroup = 0x1FFU;
-constexpr std::uint16_t kCommandIdSecondGroup = 0x2FFU;
+// GM6020 current-control command groups. The 0x1FF/0x2FF groups are for the
+// voltage-control variant and are intentionally not used here.
+constexpr std::uint16_t kCommandIdFirstGroup = 0x1FEU;
+constexpr std::uint16_t kCommandIdSecondGroup = 0x2FEU;
 constexpr std::int32_t kEncoderCountsPerRevolution = 8192;
 constexpr float kTwoPi = 6.28318530717958647692F;
 }

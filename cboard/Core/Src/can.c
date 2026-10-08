@@ -6,6 +6,8 @@ CAN_HandleTypeDef hcan1;
 volatile uint32_t cboard_can_last_error = HAL_CAN_ERROR_NONE;
 volatile uint32_t cboard_can_rx_count = 0U;
 volatile uint16_t cboard_can_last_rx_id = 0U;
+volatile uint32_t cboard_can_tx_count = 0U;
+volatile uint32_t cboard_can_last_tx_status = HAL_OK;
 
 /* Implemented in the C++ motor-state layer. The callback only forwards
  * received standard data frames; it does not issue a motor command. */
@@ -71,7 +73,13 @@ HAL_StatusTypeDef cboard_can_send_standard(
   header.RTR = CAN_RTR_DATA;
   header.DLC = length;
   header.TransmitGlobalTime = DISABLE;
-  return HAL_CAN_AddTxMessage(&hcan1, &header, (uint8_t *)data, &mailbox);
+  const HAL_StatusTypeDef status =
+    HAL_CAN_AddTxMessage(&hcan1, &header, (uint8_t *)data, &mailbox);
+  cboard_can_last_tx_status = (uint32_t)status;
+  if (status == HAL_OK) {
+    cboard_can_tx_count++;
+  }
+  return status;
 }
 
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef * hcan)

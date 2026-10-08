@@ -30,6 +30,8 @@ HAL_StatusTypeDef cboard_can_send_standard(
 extern volatile uint32_t cboard_can_last_error;
 extern volatile uint32_t cboard_can_rx_count;
 extern volatile uint16_t cboard_can_last_rx_id;
+extern volatile uint32_t cboard_can_tx_count;
+extern volatile uint32_t cboard_can_last_tx_status;
 
 #ifdef __cplusplus
 }

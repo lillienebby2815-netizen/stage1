@@ -86,7 +86,7 @@ const osThreadAttr_t imu_task_attributes = {
 osThreadId_t plotter_taskHandle;
 const osThreadAttr_t plotter_task_attributes = {
   .name = "plotter_task",
-  .stack_size = 128 * 4,
+  .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for dt7_task */
