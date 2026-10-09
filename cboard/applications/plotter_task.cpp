@@ -121,13 +121,15 @@ extern "C" void plotter_task(void * argument)
       out = append_crlf(out);
     }
 
-    // LNK,ratio,yaw,a_target,a_angle,b_target,b_angle,a_current,b_current
+    // LNK,ratio,yaw,yaw_ref,a_target,a_angle,b_target,b_angle,a_current,b_current,manual_source
     // Angles in rad, currents in raw GM6020 units. Compare b_target with
     // b_angle to see tracking error and whether current stays small/saturated.
     out = append_text(out, "LNK,");
     out = append_fixed3(out, cboard::linkage_output.motor_b_ratio);
     *out++ = ',';
     out = append_fixed3(out, cboard::linkage_yaw_angle_rad);
+    *out++ = ',';
+    out = append_fixed3(out, cboard::linkage_output.yaw_reference_angle_rad);
     *out++ = ',';
     out = append_fixed3(out, cboard::linkage_output.motor_a_target_angle_rad);
     *out++ = ',';
@@ -140,6 +142,9 @@ extern "C" void plotter_task(void * argument)
     out = append_int(out, cboard::linkage_current_a_raw);
     *out++ = ',';
     out = append_int(out, cboard::linkage_current_b_raw);
+    *out++ = ',';
+    out = append_uint(
+      out, static_cast<std::uint32_t>(cboard::linkage_output.manual_input_source));
     out = append_crlf(out);
 
     if (cycle % kDt7EveryCycles == 0U) {

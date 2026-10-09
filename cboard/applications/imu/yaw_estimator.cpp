@@ -28,6 +28,7 @@ YawEstimator yaw_estimator;
 void YawEstimator::reset()
 {
   yaw_angle_rad_ = 0.0F;
+  gyro_z_rate_rad_s_ = 0.0F;
   gyro_bias_rad_s_ = 0.0F;
   bias_sum_rad_s_ = 0.0F;
   bias_samples_ = 0U;
@@ -47,6 +48,7 @@ void YawEstimator::update(
 {
   if (!std::isfinite(gyro_z_rad_s) || tick_frequency_hz == 0U) {
     yaw_angle_rad_ = 0.0F;
+    gyro_z_rate_rad_s_ = 0.0F;
     gyro_bias_rad_s_ = 0.0F;
     bias_sum_rad_s_ = 0.0F;
     bias_samples_ = 0U;
@@ -85,6 +87,10 @@ void YawEstimator::update(
     }
     return;
   }
+
+  // The linkage's manual-motor detector needs the stationary-corrected rate;
+  // publishing the raw gyro bias here would make a steady C-board look active.
+  gyro_z_rate_rad_s_ = gyro_z_rad_s - gyro_bias_rad_s_;
 
   // A long scheduler pause should not turn into a large artificial rotation.
   if (tick_delta == 0U || elapsed_ms > 100U) {

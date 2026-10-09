@@ -14,8 +14,7 @@
 
 namespace
 {
-// These IDs are placeholders until the lab wiring and motor labels are
-// confirmed. Invalid/no feedback keeps the controller in disabled mode.
+// RM6020-08 (A) and RM6020-29 (B) share CAN1; feedback IDs are 0x205 and 0x206.
 constexpr std::uint16_t kMotorAFeedbackId = 0x205U;
 constexpr std::uint16_t kMotorBFeedbackId = 0x206U;
 
@@ -113,7 +112,14 @@ void send_linkage_current_command(
 {
   static PositionPidState motor_a_pid;
   static PositionPidState motor_b_pid;
+  static cboard::LinkageMode previous_mode = cboard::LinkageMode::kDisabled;
   std::int16_t current[4] = {0, 0, 0, 0};
+
+  if (output.mode != previous_mode) {
+    motor_a_pid.reset();
+    motor_b_pid.reset();
+    previous_mode = output.mode;
+  }
 
   // The right-switch safety decision and feedback validity are checked again
   // here before any nonzero current is sent.
@@ -173,6 +179,7 @@ extern "C" void linkage_task(void * argument)
 
     cboard::LinkageInput input;
     input.yaw_angle_rad = cboard::yaw_estimator.angle_rad();
+    input.yaw_rate_rad_s = cboard::yaw_estimator.yaw_rate_rad_s();
     input.motor_a_angle_rad = motor_a.angle_rad;
     input.motor_b_angle_rad = motor_b.angle_rad;
     input.left_switch = remote.left_switch;

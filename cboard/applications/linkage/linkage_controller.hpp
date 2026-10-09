@@ -13,6 +13,13 @@ enum class LinkageMode : std::uint8_t
   kReset,
 };
 
+enum class ManualInputSource : std::uint8_t
+{
+  kNone,
+  kMotorA,
+  kMotorB,
+};
+
 enum class SwitchPosition : std::int8_t
 {
   kDown = -1,
@@ -30,19 +37,19 @@ struct LinkageConfig
   float motor_b_ratio_middle = -1.0F;
   float motor_b_ratio_up = 3.0F;
 
-  // These are mechanical alignment values and must be calibrated in the lab.
-  float motor_a_reset_angle_rad = 0.0F;
-  float motor_b_reset_angle_rad = 0.0F;
-  bool reset_reference_calibrated = false;
+  // During reset both motor R marks follow the C-board R mark at 1:1.
+  // This sign/ratio is independent of the normal left-switch B ratio.
+  float motor_b_reset_to_yaw_ratio = 1.0F;
 
   float manual_detection_threshold_rad = 0.02F;
   float target_reached_threshold_rad = 0.04F;
-  float yaw_motion_threshold_rad = 0.01F;
+  float yaw_motion_threshold_rad_s = 0.01F;
 };
 
 struct LinkageInput
 {
   float yaw_angle_rad = 0.0F;
+  float yaw_rate_rad_s = 0.0F;
   float motor_a_angle_rad = 0.0F;
   float motor_b_angle_rad = 0.0F;
 
@@ -66,6 +73,8 @@ struct LinkageOutput
   float yaw_reference_angle_rad = 0.0F;
   float motor_a_reference_angle_rad = 0.0F;
   float motor_b_reference_angle_rad = 0.0F;
+  bool reset_reference_calibrated = false;
+  ManualInputSource manual_input_source = ManualInputSource::kNone;
 };
 
 class LinkageController
@@ -79,7 +88,17 @@ public:
 private:
   LinkageConfig config_;
   LinkageOutput output_;
+  ManualInputSource manual_source_ = ManualInputSource::kNone;
+  float manual_source_origin_angle_rad_ = 0.0F;
+  float manual_source_origin_yaw_reference_rad_ = 0.0F;
+  std::uint16_t manual_source_stationary_cycles_ = 0U;
   bool has_reference_ = false;
+  bool startup_reset_reference_decided_ = false;
+  bool reset_recalibration_required_ = false;
+  bool reset_reference_calibrated_ = false;
+  float reset_reference_yaw_angle_rad_ = 0.0F;
+  float reset_reference_motor_a_angle_rad_ = 0.0F;
+  float reset_reference_motor_b_angle_rad_ = 0.0F;
   float previous_yaw_sensor_angle_rad_ = 0.0F;
   float yaw_unwrapped_angle_rad_ = 0.0F;
   bool yaw_sensor_initialized_ = false;
@@ -97,6 +116,7 @@ private:
   bool config_valid() const;
   void update_yaw_tracking(const LinkageInput & input);
   void capture_reference(const LinkageInput & input);
+  void capture_reset_reference(const LinkageInput & input);
   void update_measurement_history(const LinkageInput & input);
   void make_disabled_output(const LinkageInput & input);
   void make_reset_output(const LinkageInput & input);
